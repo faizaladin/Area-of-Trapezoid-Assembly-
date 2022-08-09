@@ -1,0 +1,1 @@
+Takes three inputs (base1, base2, base3) and returns the area of the trapezoid. The code is written in assembly and can be run within a MIC-1 processor architecture. 

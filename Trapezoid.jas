@@ -1,0 +1,282 @@
+// invokevirtual.jas
+// Program demonstrates method invocation
+
+.constant
+    OBJREF 0x40			// needed for method invocation
+.end-constant
+
+
+//Press ENTER RETURN after each input and once after the final input
+
+//====================== MAIN =======================
+//===================================================
+.main				   // start of program
+
+        .var
+            base1 
+            base2
+            height
+            sum
+            semitotal
+            total
+        .end-var
+
+START:  BIPUSH 0x0
+        DUP
+        ISTORE base1
+        ISTORE base2
+        ISTORE height
+        BIPUSH 0x20
+        LDC_W OBJREF
+        INVOKEVIRTUAL getnum     //Grabs base 1
+        ISTORE base1
+        LDC_W OBJREF
+        INVOKEVIRTUAL getnum     //Grabs base 2
+        ISTORE base2
+        LDC_W OBJREF
+        INVOKEVIRTUAL getnum     //Grabs base 3
+        ISTORE height
+        ILOAD base1
+        ILOAD base2
+        IADD
+        ISTORE sum              //Adds bases together
+        LDC_W OBJREF
+        ILOAD sum
+        INVOKEVIRTUAL divtwo    //Passes sum of bases to division method
+        ISTORE semitotal
+        LDC_W OBJREF
+        ILOAD semitotal
+        ILOAD height
+        INVOKEVIRTUAL mult      //Passes the sum of bases divided by two and the height to multiplication method
+        ISTORE total
+        LDC_W OBJREF
+        ILOAD total
+        INVOKEVIRTUAL print     //Prints total
+        OUT
+
+
+.end-main
+
+//===================== DIVTWO ======================
+//===================================================
+.method divtwo(num1)
+         .var
+             k
+         .end-var
+         BIPUSH 0x0
+         ISTORE k
+WHILE: ILOAD num1          //While loop is in effect until the number passed is lower than 0. Counter increments for each loop and is then returned at the end. 
+       BIPUSH 2
+       ISUB
+       ISTORE num1
+       ILOAD num1
+       IFLT DONE
+       ILOAD k
+       BIPUSH 1
+       IADD
+       ISTORE k
+       GOTO WHILE
+
+
+DONE:  ILOAD k
+       IRETURN
+
+.end-method
+
+//===================== MULT ======================
+//=================================================
+
+.method mult(num1, num2)
+         .var
+             k
+             a
+         .end-var
+         BIPUSH 0x0
+         ISTORE k
+         BIPUSH 1
+         ISTORE k
+         BIPUSH 0x0
+         ISTORE a
+         ILOAD num1
+         ISTORE a
+
+WHILE: ILOAD num2       //Counter is checked against the second number passed to the method. Until the numbers are equal, num1 will keep adding to itself each loop. Num1 is returned at the end
+       ILOAD k
+       IF_ICMPEQ DONE
+       ILOAD num1
+       ILOAD a
+       IADD
+       ISTORE num1
+       ILOAD k
+       BIPUSH 1
+       IADD
+       ISTORE k
+       GOTO WHILE
+
+
+DONE:  ILOAD num1
+       IRETURN
+
+.end-method
+
+//===================== GETNUM ======================
+//===================================================
+.method getnum()
+        .var
+            a
+        .end-var
+
+        BIPUSH 0x0		// initialize a
+        ISTORE a
+geta:   IN              // read key press
+        DUP             // duplicate key for comparison
+        BIPUSH 0xa      // if key = cr,
+        IF_ICMPEQ return	//   return
+        DUP
+        BIPUSH 0x30	    // if key < "0"
+        ISUB			//
+        IFLT geta4		//   goto geta4 (key is not a hex digit)
+            DUP
+        BIPUSH 0x3a		// else if key < ":"
+        ISUB			//
+        IFLT geta2		//   goto geta2 (key is numeric character - "0"-"9")
+        DUP
+        BIPUSH 0x41		// else if key < "A"
+        ISUB			//
+        IFLT geta4		//   goto geta4 (key is not a hex digit)
+        DUP
+        BIPUSH 0x46		// else if key > "F"
+        SWAP			//  
+        ISUB			//
+        IFLT geta4		//   goto geta4 (key is not a hex digit)
+        DUP			    // else (key is letter - "A"-"F")
+        OUT			    //   print key
+        BIPUSH 0x37		//   convert key from character to number
+        ISUB			//
+        GOTO geta3		//   goto geta3
+geta2:  DUP
+        OUT			    // print key (numeric character)
+        BIPUSH 0x30		// convert key from character to number
+        ISUB
+geta3:  ILOAD a			// shift a left 4 bits
+        DUP
+        IADD
+        DUP
+        IADD
+        DUP
+        IADD
+        DUP
+        IADD
+        IADD			// add key to a
+        ISTORE a
+        GOTO geta		// get next key
+
+geta4:  POP			    // pop invalid character
+        GOTO geta		// get next key
+
+return: OUT			    // print cr
+        ILOAD a			// load a as return value
+        IRETURN			// return
+        
+.end-method
+
+//===================== PRINT =======================
+//===================================================
+.method print( total ) 		
+// print converts a number into a string of
+//   characters and prints them.  All of the characters
+//   are pushed onto the stack, least significant
+//   digit first, then popped off and printed.
+
+        .var
+            place
+            index
+        .end-var
+
+print:  BIPUSH 0x9		// there are 8 nibbles in each integer--setting
+				        //   this as nine pushes 10 characters onto the
+                        //   stack, thus a total of ten printed digits,
+                        //   but setting this less does not remove the
+                        //   two leading zeros, just removes significant
+                        //   digits
+        ISTORE index
+        BIPUSH 0x1		// comparison bit
+        ISTORE place
+print1: BIPUSH 0x0
+        ILOAD index		// index = index - 1
+        BIPUSH 0x1
+        ISUB
+        DUP
+        IFEQ pall		// if index = 0  goto pall
+        ISTORE index
+        ILOAD total		// else
+        ILOAD place		//
+        IAND			//   if 1st bit of current nibble is zero (total & place)
+        IFEQ print2		//     goto print2
+        BIPUSH 0x1		//   else set first bit of character
+        IADD
+print2: ILOAD place		//   place = place << 1 
+        DUP
+        IADD
+        ISTORE place
+        ILOAD total
+        ILOAD place
+        IAND			//   if 2nd bit of current nibble is zero (total & place)
+        IFEQ print3		//     goto print3
+        BIPUSH 0x2		//   else set second bit of character
+        IADD	
+print3: ILOAD place		//   place = place << 1
+        DUP
+        IADD
+        ISTORE place
+        ILOAD total
+        ILOAD place
+        IAND			//   if 3rd bit of current nibble is zero (total & place)
+        IFEQ print4		//     goto print4
+        BIPUSH 0x4		//   else set second bit of character
+        IADD	
+print4: ILOAD place		//   place = place << 1
+        DUP
+        IADD
+        ISTORE place
+        ILOAD total
+        ILOAD place
+        IAND			//   if 4th bit of current nibble is zero (total & place)
+        IFEQ print5		//     goto print5
+        BIPUSH 0x8		//   else set second bit of character
+        IADD	
+print5: ILOAD place		//   place = place << 1
+        DUP
+        IADD
+        ISTORE place
+        GOTO print1
+	
+pall:   POP			// Pop off leading 0's
+        POP
+        BIPUSH 0x9
+        ISTORE index
+pall1:  ILOAD index		// index = index - 1
+        BIPUSH 0x1
+        ISUB
+        DUP
+        IFEQ return		// if index = 0  return
+        ISTORE index
+        DUP
+        BIPUSH 0xa		// else if character < 0xa goto pall1
+        ISUB
+        IFLT pall2
+        BIPUSH 0x37		// else convert character to "A"-"F"
+        IADD
+        OUT			// print character
+        GOTO pall1		// goto pall (prepare & print next character)
+pall2:  BIPUSH 0x30		// convert character to "0"-"9"
+        IADD
+        OUT			// print character
+        GOTO pall1		// goto pall1 (prepare & print next character)
+return: BIPUSH 0xa		// print cr
+        OUT
+        IRETURN			// no return value
+        
+.end-method
+
+
